@@ -1,5 +1,6 @@
 import pygame
 from random import randint
+from pygame.sprite import spritecollide as sc
 
 pygame.init()
 #dolocimo velikost igralnega okna
@@ -18,12 +19,12 @@ class pot(pygame.sprite.Sprite):
 		self.sirina = sirina
 		self.barva = barva
 
-		dolzina = abs(self.zacetek[0]-self.konec[0])+self.sirina*4
-		y_sirina = abs(self.zacetek[1]-self.konec[1])+ self.sirina*4
+		dolzina = abs(self.zacetek[0]-self.konec[0])+self.sirina
+		y_sirina = abs(self.zacetek[1]-self.konec[1])+self.sirina
 		self.image = pygame.Surface((dolzina,y_sirina),pygame.SRCALPHA)
 
-		y = min(self.zacetek[1], self.konec[1])-self.sirina*2
-		x = min(self.zacetek[0], self.konec[0])-self.sirina*2
+		y = min(self.zacetek[1], self.konec[1])-self.sirina//2
+		x = min(self.zacetek[0], self.konec[0])-self.sirina//2
 		pygame.draw.line(self.image, self.barva, (self.zacetek[0]-x,self.zacetek[1]-y),
 						(self.konec[0]-x, self.konec[1]-y), self.sirina)
 		pygame.draw.circle(self.image,self.barva,(self.konec[0]-x,self.konec[1]-y),
@@ -76,70 +77,84 @@ if smer == 2:
 	
 
 class turrets(pygame.sprite.Sprite):
-	def __init__(self, funkcija, x, y, active=True,w = 50, h = 50, barva=(50,50,255)):
+	def __init__(self, funkcija, x, y, active="static", pot=None,
+		stolpi = None, w = 50, h = 50, barva=(50,50,255)):
 		super().__init__()
 		self.funkcija = funkcija
 		self.w = w
 		self.h = h
 		self.active = active
-
+		self.pot = pot
+		self.stolpi = stolpi
+		self.barva = barva
 		self.image = pygame.Surface((self.w,self.h))
 		self.rect = self.image.get_rect()
 		self.rect.x = x
 		self.rect.y = y
-
-		#DOLOCANJE BARVE
+	def update(self):
+		if self.active == "moving":
+			x = pygame.mouse.get_pos()[0]
+			y = pygame.mouse.get_pos()[1]
+			self.rect.x = x - self.w //2
+			self.rect.y = y - self.h//2
+			self.image.fill(self.barva)
+		if self.active == "tested":
+			for dotikanje in sc(na_preverjanju,self.pot,False):
+				if dotikanje != None:
+					na_preverjanju.kill()
+					break
+			else:
+				for tower in sc(na_preverjanju,self.stolpi,False):
+					if tower.active == "placed" or tower.active == "static":
+						na_preverjanju.kill()
+						break
+				else:
+					self.active = "placed"
 		#1 ---> AOE
-		if funkcija == 1:
+		if self.funkcija == 1:
 			self.barva = (0,255,0)
 			self.image.fill(self.barva)
 			velikost = pygame.font.SysFont("comicsansms", 22)
 			text = velikost.render("AOE", True, (0, 0, 0))
 			self.image.blit(text, (self.w//5, self.h//3))
 		#2 ---> dmg
-		if funkcija == 2:
+		if self.funkcija == 2:
 			self.barva = (255,0,0)
 			self.image.fill(self.barva)
 			velikost = pygame.font.SysFont("comicsansms", 22)
 			text = velikost.render("DMG", True, (0, 0, 0))
 			self.image.blit(text, (self.w//5, self.h//3))
 		#3 ---> slow
-		if funkcija == 3:
+		if self.funkcija == 3:
 			self.barva = (0,0,255)
 			self.image.fill(self.barva)
 			velikost = pygame.font.SysFont("comicsansms", 22)
 			text = velikost.render("SLOW", True, (0, 0, 0))
 			self.image.blit(text, (self.w//15, self.h//3))
 		#4 ---> ozadje menija
-		if funkcija == 4:
-			self.barva = (100,100,100)
+		if self.funkcija == 4:
+			self.barva = (200,200,200)
 			self.image.fill(self.barva)
 		#5 ---> smetnjak
-		if funkcija == 5:
+		if self.funkcija == 5:
 			self.barva = (10,10,10)
 			self.image.fill(self.barva)
 			velikost = pygame.font.SysFont("comicsansms", 18)
 			text = velikost.render("TRASH", True, (255,255,255))
-			self.image.blit(text, (self.w//15, self.h//3))
-	def update(self):
-		if self.active == True:
-			x = pygame.mouse.get_pos()[0]
-			y = pygame.mouse.get_pos()[1]
-			self.rect.x = x - self.w //2
-			self.rect.y = y - self.h//2
-			self.image.fill(self.barva)
-stolpi = pygame.sprite.Group()
+			self.image.blit(text, (self.w//16,self.h//3))
 
+
+stolpi = pygame.sprite.Group()
 #ozadje menija
-meni = turrets(4,0,0,False,300,75)
+#meni = turrets(4,0,0,False,300,75)
 
 #stolpi v meniju
-AOE = turrets(1,0,0,False)
-DMG = turrets(2,75,0,False)
-SLOW = turrets(3,150,0,False)
-smetnjak = turrets(5,225,0,False)
+AOE = turrets(1,0,0)
+DMG = turrets(2,75,0)
+SLOW = turrets(3,150,0)
+smetnjak = turrets(5,225,0)
 
-stolpi.add(meni)
+#stolpi.add(meni)
 stolpi.add(AOE)
 stolpi.add(DMG)
 stolpi.add(SLOW)
@@ -155,6 +170,21 @@ while delaj:
 		if dogodek.type == pygame.QUIT:
 			delaj = False
 		if dogodek.type == pygame.MOUSEBUTTONDOWN:
+			#ce smo z misko kliknili in drzimo stolp, ga zelimo postaviti
+			if attached:
+				#preverimo ce smo kliknili na smetnjak
+				lokacija = pygame.mouse.get_pos()
+				objekti = [i for i in stolpi if i.rect.collidepoint(lokacija)]
+				if objekti != [] and smetnjak in objekti:
+					attached = False
+					zacasni.kill()
+				#ce nismo ustvarimo turret, a ker se ne vemo ce je slucajno
+				else:
+					na_preverjanju = turrets(zacasni.funkcija,zacasni.rect.x,zacasni.rect.y,
+					"tested",pot=odseki,stolpi=stolpi)
+					stolpi.add(na_preverjanju)
+			#ce z misko kliknemo na dolocen turret v meniju, 
+			#bo ta seldil miski(zato self.active=True)
 			if attached == False:
 				lokacija = pygame.mouse.get_pos()
 				objekti = [i for i in stolpi if i.rect.collidepoint(lokacija)]
@@ -162,32 +192,20 @@ while delaj:
 					attached = True
 					x = pygame.mouse.get_pos()[0]
 					y = pygame.mouse.get_pos()[1]
-					zacasni = turrets(1,x,y)
+					zacasni = turrets(1,x,y,"moving")
 					stolpi.add(zacasni)
 				elif objekti != [] and DMG in objekti:
 					attached = True
 					x = pygame.mouse.get_pos()[0]
 					y = pygame.mouse.get_pos()[1]
-					zacasni = turrets(2,x,y)
+					zacasni = turrets(2,x,y,"moving")
 					stolpi.add(zacasni)
 				elif objekti != [] and SLOW in objekti:
 					attached = True
 					x = pygame.mouse.get_pos()[0]
 					y = pygame.mouse.get_pos()[1]
-					zacasni = turrets(3,x,y)
+					zacasni = turrets(3,x,y,"moving")
 					stolpi.add(zacasni)
-			else:
-				lokacija = pygame.mouse.get_pos()
-				objekti = [i for i in stolpi if i.rect.collidepoint(lokacija)]
-				objekti_2 = [i for i in odseki if i.rect.collidepoint(lokacija)]
-				if objekti != [] and smetnjak in objekti:
-					attached = False
-					zacasni.kill()
-				if len(objekti) + len(objekti_2) == 1:
-					attached = False
-					stolpi.add(turrets(zacasni.funkcija,zacasni.rect.x,zacasni.rect.y,False))
-					zacasni.kill()
-
 	stolpi.update()
 	okno.fill((200,200,255))
 	odseki.draw(okno)
@@ -205,7 +223,4 @@ pygame.quit()
 #PROBLEMI / NAPAKE
 """
 -MENI ZA STOLPE: vcasih prekrije stolpe znotraj menija!
-
--COLLIDE Z POTJO: postavljanje stolpov temelji na zaznavanju prekrivanja, a to ne deluje s
-				  potjo, saj ima ta širši collide point od grafičnega prikaza!
 """
