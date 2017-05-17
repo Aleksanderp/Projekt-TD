@@ -9,6 +9,9 @@ visina = 800
 denar = 800
 delaj = True
 
+#potem dodamo glede na meni !!!! ZA MAIN MENU
+dificulty = 200
+
 #seznam za preimkanje... elementi: smer in sprememba v tej smeri
 vrstni_red = []
 
@@ -26,7 +29,7 @@ class pot(pygame.sprite.Sprite):
 
 		dolzina = abs(self.zacetek[0]-self.konec[0])+self.sirina
 		y_sirina = abs(self.zacetek[1]-self.konec[1])+self.sirina
-		self.image = pygame.Surface((dolzina,y_sirina),pygame.SRCALPHA)
+		self.image = pygame.Surface((dolzina,y_sirina), pygame.SRCALPHA)
 
 		y = min(self.zacetek[1], self.konec[1])-self.sirina//2
 		x = min(self.zacetek[0], self.konec[0])-self.sirina//2
@@ -78,28 +81,58 @@ while prvi or drugi:
 			drugi = False
 
 #DOVRŠITEV ZAKLJUČKA POTI (DO ROBA EKRANA)
+
 if smer == 1:
-	vrstni_red.append(("x",visina-start_y))
+	vrstni_red.append(("y",start_y - visina))
 	odseki.add(pot([start_x,start_y],[start_x,start_y-(visina-start_y)],sirina_poti))
 if smer == 2:
 	odseki.add(pot([start_x,start_y],[start_x+(sirina-start_x),start_y],sirina_poti))
-	vrstni_red.append(("y",sirina-start_x))
+	vrstni_red.append(("x",sirina - start_x))
 	
 
 class turrets(pygame.sprite.Sprite):
 	def __init__(self, funkcija, x, y, active="static", pot=None,
-		stolpi = None, w = 50, h = 50, barva=(50,50,255), cost = 0):
+		stolpi = None, r = 25, cost = 0):
 		super().__init__()
 		self.cost = cost
 		self.funkcija = funkcija
-		self.w = w
-		self.h = h
+		self.r = r
 		self.active = active
 		self.pot = pot
 		self.stolpi = stolpi
-		self.barva = barva
-		self.image = pygame.Surface((self.w,self.h))
+		##############################
+				#1 ---> AOE
+		if self.funkcija == 1:
+			self.barva = (0,255,0)
+			velikost = pygame.font.SysFont("comicsansms", 20)
+			self.text = velikost.render("AOE", True, (0, 0, 0))
+
+		#2 ---> dmg
+		if self.funkcija == 2:
+			self.barva = (255,0,0)
+			velikost = pygame.font.SysFont("comicsansms", 20)
+			self.text = velikost.render("DMG", True, (0, 0, 0))
+		#3 ---> slow
+		if self.funkcija == 3:
+			self.barva = (0,0,255)
+			velikost = pygame.font.SysFont("comicsansms", 20)
+			self.text = velikost.render("SLOW", True, (0, 0, 0))
+		#4 ---> money
+		if self.funkcija == 4:
+			self.barva = (200,200,255)
+			velikost = pygame.font.SysFont("comicsansms", 20)
+			self.text = velikost.render(str(denar), True, (255, 255, 255))
+		#5 ---> smetnjak
+		if self.funkcija == 5:
+			self.barva = (10,10,10)
+			velikost = pygame.font.SysFont("comicsansms", 16)
+			self.text = velikost.render("TRASH", True, (255, 255, 255))
+		####################################################3
+		self.image = pygame.Surface((self.r*2,self.r*2),pygame.SRCALPHA)
 		self.rect = self.image.get_rect()
+		pygame.draw.circle(self.image,self.barva, (self.r,self.r),
+							self.r,0)
+
 		self.rect.x = x
 		self.rect.y = y
 	def update(self):
@@ -107,9 +140,8 @@ class turrets(pygame.sprite.Sprite):
 		if self.active == "moving":
 			x = pygame.mouse.get_pos()[0]
 			y = pygame.mouse.get_pos()[1]
-			self.rect.x = x - self.w //2
-			self.rect.y = y - self.h//2
-			self.image.fill(self.barva)
+			self.rect.x = x - self.r
+			self.rect.y = y - self.r
 		if self.active == "tested":
 			for dotikanje in sc(na_preverjanju,self.pot,False):
 				if dotikanje != None:
@@ -126,39 +158,19 @@ class turrets(pygame.sprite.Sprite):
 					self.active = "placed"
 		#1 ---> AOE
 		if self.funkcija == 1:
-			self.barva = (0,255,0)
-			self.image.fill(self.barva)
-			velikost = pygame.font.SysFont("comicsansms", 22)
-			text = velikost.render("AOE", True, (0, 0, 0))
-			self.image.blit(text, (self.w//5, self.h//3))
+			self.image.blit(self.text, (self.r//5, self.r-10))
 		#2 ---> dmg
 		if self.funkcija == 2:
-			self.barva = (255,0,0)
-			self.image.fill(self.barva)
-			velikost = pygame.font.SysFont("comicsansms", 22)
-			text = velikost.render("DMG", True, (0, 0, 0))
-			self.image.blit(text, (self.w//5, self.h//3))
-		#3 ---> slow
+			self.image.blit(self.text, (self.r//5, self.r-10))
+		#3 ---> slor
 		if self.funkcija == 3:
-			self.barva = (0,0,255)
-			self.image.fill(self.barva)
-			velikost = pygame.font.SysFont("comicsansms", 22)
-			text = velikost.render("SLOW", True, (0, 0, 0))
-			self.image.blit(text, (self.w//15, self.h//3))
+			self.image.blit(self.text, (self.r//15, self.r-10))
 		#4 ---> money
 		if self.funkcija == 4:
-			self.barva = (200,200,255)
-			self.image.fill(self.barva)
-			velikost = pygame.font.SysFont("comicsansms", 18)
-			text = velikost.render(str(denar)+" $", True, (0,0,255))
-			self.image.blit(text, (self.w//16,self.h//3))
+			self.image.blit(self.text, (self.r//16,self.r-8))
 		#5 ---> smetnjak
 		if self.funkcija == 5:
-			self.barva = (10,10,10)
-			self.image.fill(self.barva)
-			velikost = pygame.font.SysFont("comicsansms", 18)
-			text = velikost.render("TRASH", True, (255,255,255))
-			self.image.blit(text, (self.w//16,self.h//3))
+			self.image.blit(self.text, (self.r//16,self.r-10))
 
 
 stolpi = pygame.sprite.Group()
@@ -181,34 +193,38 @@ stolpi.add(m_display)
 
 class enemy(pygame.sprite.Sprite):
 	def __init__(self,idx,hp = 0, speed = 0, prostor = 0,x=sirina_poti,y=visina, barva=(255,255,255),
-			r=10):
+			r=10, hitrost = 0):
 		super().__init__()
 		self.idx = idx
 		self.count = 0
 		self.r = r
-		self.prostor = prostor
+		self.prostor = vrstni_red[self.count][1]
 		self.speed = speed
-
+		self.hitrost = hitrost
+		self.barva = barva
 		#hiter, low hp
 		if self.idx == 1:
 			self.speed = 5
 			self.hp = 10
+			self.barva = (134,189,0)
 		if self.idx == 2:
 			self.speed = 2
 			self.hp = 200
+			self.barva = (45,189,97)
 		if self.idx == 3:
 			self.speed = 1
 			self.hp = 500
+			self.barva = (76,10,134)
 
-		self.barva = barva
-		self.image = pygame.Surface((self.r*2,self.r*2), pygame.SRCALPHA)
+		self.image = pygame.Surface((self.r*2,self.r*2),pygame.SRCALPHA)
 		pygame.draw.circle(self.image, self.barva, [self.r, self.r], self.r, 0)
 		self.rect = self.image.get_rect()
-		self.rect.x = x
-		self.rect.y = y
+		self.rect.x = x - r
+		self.rect.bottom = y + r
 	def update(self):
+		self.premik()
+	def premik(self):
 		global vrstni_red
-		self.prostor = vrstni_red[self.count][1]
 		hitrost = self.speed
 		while self.speed > 0:
 			if vrstni_red[self.count][0] == "x":
@@ -217,22 +233,24 @@ class enemy(pygame.sprite.Sprite):
 					self.prostor -= self.speed
 					self.speed = 0
 				else:
-					self.rect.x += (self.prostor-self.speed)
-					self.speed -= (self.prostor-self.speed)
+					self.rect.x += self.prostor
+					self.speed -= self.prostor
 					self.count += 1
 					self.prostor = vrstni_red[self.count][1]
-			if vrstni_red[self.count][0] == "y":
+			elif vrstni_red[self.count][0] == "y":
 				if self.prostor - self.speed >= 0:
 					self.rect.y -= self.speed
 					self.prostor -= self.speed
 					self.speed = 0
 				else:
-					self.rect.y -= (self.prostor-self.speed)
-					self.speed -= (self.prostor-self.speed)
+					self.rect.y -= self.prostor
+					self.speed -= self.prostor
 					self.count += 1
+					self.prostor = vrstni_red[self.count][1]
 		self.speed = hitrost
 
 napad = pygame.sprite.Group()
+napad.add(enemy(3))
 
 #GLAVNA WHILE ZANKA
 #spremenljivka, da vemo kdaj z misko"drzimo" en stolp
@@ -251,7 +269,7 @@ while delaj:
 				if objekti != [] and smetnjak in objekti:
 					attached = False
 					zacasni.kill()
-				#ce nismo ustvarimo turret, a ker se ne vemo ce je slucajno
+				#ce nismo ustvarimo turret, a ker se ne vemo ce je slucajno na poti ali na drugem turetu... :
 				else:
 					if denar - zacasni.cost >=  0:
 						denar -= zacasni.cost
@@ -281,8 +299,12 @@ while delaj:
 					y = pygame.mouse.get_pos()[1]
 					zacasni = turrets(3,x,y,"moving", cost = 20)
 					stolpi.add(zacasni)
-	if randint(1,100) == 2:
+	if randint(0,dificulty) == 1:
 		napad.add(enemy(3))
+	if randint(0,dificulty-dificulty//4) == 1:
+		napad.add(enemy(1))
+	if randint(0,dificulty*(dificulty//8)) == 1:
+		napad.add(enemy(2))
 	napad.update()
 	stolpi.update()
 	okno.fill((200,200,255))
